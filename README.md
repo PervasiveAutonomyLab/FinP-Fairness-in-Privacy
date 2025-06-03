@@ -20,7 +20,7 @@ conda activate finp
 
 ## 🚀 How to Run Experiments
 
-Use --opt to activate server PCA aggregation; Use --col to activate client adaptive loss regularization.
+Use --opt to activate server side PCA aggregation; Use --col to activate client side adaptive loss regularization.
 
 ### 📊 Human Activity Recognition (HAR) Dataset
 
