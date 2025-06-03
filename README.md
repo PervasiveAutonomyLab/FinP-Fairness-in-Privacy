@@ -3,8 +3,8 @@
 Codebase for the paper:  
 **"FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk"**
 
-This repository contains implementations and experiment scripts to reproduce the results presented in the paper.
-Arxiv: https://arxiv.org/abs/2502.17748
+This repository contains implementations and experiment scripts to reproduce the results presented in the [paper](https://arxiv.org/abs/2502.17748).
+
 ---
 
 ## 📦 Environment Setup
