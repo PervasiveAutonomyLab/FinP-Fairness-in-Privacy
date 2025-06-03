@@ -1,0 +1,40 @@
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20
+
+
+
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.1 --num_users=10 --local_ep=5
+
+in cifar, original results used beta 0.05
+
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5
+
+python -u main_fed.py --datase
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5 --opt --col --pairwise | tee output0001.txt
+
+
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5| tee outputbase.txt
+
+python -u main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5| tee outputbase.txt
+
+
+# cnn prompt
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=1 --num_users=10 --local_ep=5 --col --opt --pairwise --beta=0.1
+# alpha 0.5
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --col --opt --pairwise --beta=0.1
+
+
+
+
+
+    # elif args.dataset == 'CIFAR10':
+    #     if args.RL is True:
+    #         folder = 'results/CIFAR/'
+    #     elif args.opt is True:
+    #         folder = 'results/CIFAR/opt'
+    #     else:
+    #         folder = 'results/CIFAR/nonRL/'
+
+beta
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --opt --col --pairwise 
+
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt --col --beta=2
