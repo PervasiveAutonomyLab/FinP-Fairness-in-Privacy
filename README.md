@@ -1,62 +1,100 @@
-# FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk
+# FinP: Fairness-in-Privacy in Federated Learning
 
-Code for experiments in paper "FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk"
+Codebase for the paper:  
+**"FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk"**
 
+This repository contains implementations and experiment scripts to reproduce the results presented in the paper.
+Arxiv: https://arxiv.org/abs/2502.17748
 ---
 
+## 📦 Environment Setup
 
-## Environment Setup
+We recommend using [Conda](https://docs.conda.io/) for environment management.
 
-Conda Environment
-
-
+```bash
 conda env create -f environment.yml
 conda activate finp
+```
 
 ---
 
-## How to Run
+## 🚀 How to Run Experiments
 
-### For reproduce experiments of using HAR dataset:
+Use --opt to activate server PCA aggregation; Use --col to activate client adaptive loss regularization.
 
-baseline:
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 
+### 📊 Human Activity Recognition (HAR) Dataset
 
-Server only:
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt 
+**Baseline:**
+```bash
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20
+```
 
-Client only:
+**Server-Only:**
+```bash
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt
+```
+
+**Client-Only:**
+```bash
 python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --col --beta=2
+```
 
-FinP:
+**FinP (Full):**
+```bash
 python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt --col --beta=2
-
-### For reproduce experiments of using CIFAR10 dataset:
-
-baseline(CNN):
-python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-
-FinP(CNN): (Note: change --beta = 0.05, 0.1, 0.3, 0.5 to reproduce ablation experiments of beta)
-python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20 --opt --col --beta=0.1
-
-baseline(ResNet):
-python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedavg --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-
-FedAlign(ResNet):
-python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedalign --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-
-FinP(ResNet): 
-python main_fed.py --dataset=CIFAR10 --model=res  --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20 --opt --col --beta=0.05
-
-### plotting
-Each experiment will generate a pickle file in folder results/. copy the pickle file into the same directory as plotting.py and follow the instruction inside plotting.py to reproduce figures in paper
+```
 
 ---
 
-## Dependencies
+### 🖼️ CIFAR-10 Dataset
 
-Main libraries used:
+#### CNN Models
 
+**Baseline (CNN):**
+```bash
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
+```
+
+**FinP (CNN):**
+```bash
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20 --opt --col --beta=0.1
+```
+*For ablation studies, vary `--beta` among `0.05`, `0.1`, `0.3`, and `0.5`.*
+
+#### ResNet Models
+
+**Baseline (ResNet with FedAvg):**
+```bash
+python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedavg --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
+```
+
+**FedAlign (ResNet):**
+```bash
+python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedalign --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
+```
+
+**FinP (ResNet):**
+```bash
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.5 --num_users=10 --local_ep=5 --opt --col --beta=0.05 --epochs=20
+```
+
+---
+
+## 📈 Plotting Results
+
+Each experiment generates a `.pkl` file in the `results/` folder.
+
+To create plots:
+1. Copy the desired pickle file into the same directory as `plotting.py`.
+2. Follow the instructions inside `plotting.py` to reproduce the figures used in the paper.
+
+---
+
+## 📚 Dependencies
+
+The main Python libraries used are:
+
+```
 matplotlib==3.10.3
 numpy==2.2.6
 pandas==2.2.3
@@ -65,6 +103,8 @@ scipy==1.15.3
 seaborn==0.13.2
 torch==2.6.0
 torchvision==0.21.0
+```
 
+All dependencies are included in the `environment.yml` file.
 
 ---
