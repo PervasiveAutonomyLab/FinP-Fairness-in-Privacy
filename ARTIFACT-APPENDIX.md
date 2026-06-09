@@ -15,8 +15,7 @@ paper *FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities
 in Privacy Risk*. FinP is a federated-learning method that reduces disparity in
 per-client privacy risk under **Source Inference Attacks (SIA)** and
 **Membership Inference Attacks (MIA)** through two mechanisms: server-side
-aggregation optimization (`--opt`) and client-side adaptive loss regularization
-(`--col`, controlled by `--beta`).
+aggregation optimization and client-side adaptive loss regularization.
 
 The artifact provides:
 
@@ -25,8 +24,7 @@ The artifact provides:
 - `experiments/` — per-dataset experiment matrices (`config.py`), an automation
   runner (`run.py`) that reproduces every configuration and tees logs, and a
   parser (`compare.py`) that tabulates the comparison metrics automatically.
-- `models/`, `utils/`, `FedAlign/` — model definitions, dataset loaders, and the
-  FedAlign baseline.
+- `models/`, `utils/` — model definitions, dataset loaders, etc.
 
 ### Security/Privacy Issues and Ethical Concerns
 
@@ -68,12 +66,8 @@ artifact also runs on CPU, but substantially slower.
 
 - **Compute time.** On an A100 GPU, a single FEMNIST run (20 communication
   rounds) takes a few minutes; the full FEMNIST matrix (7 runs) takes roughly
-  1–2 hours. FEMNIST-mia adds MIA overhead per round. HAR runs complete in
-  minutes; CIFAR-10 (CNN/ResNet) runs take longer on the first invocation due to
-  the dataset download. On CPU these times grow by roughly an order of magnitude.
-  A reviewer can validate functionality in ~2–3 minutes using the smoke test
-  below.
-- **Human time.** ~15 minutes of active setup; the rest is unattended compute.
+  1–2 hours. 
+- **Human time.** ~20 minutes of active setup; the rest is unattended compute.
 - **Disk.** < 4 GB total (cached datasets, per-run pickles, and logs).
 
 ## Environment
@@ -81,17 +75,16 @@ artifact also runs on CPU, but substantially slower.
 ### Accessibility
 
 The artifact is hosted on GitHub:
-<https://github.com/PervasiveAutonomyLab/FinP-Fairness-in-Privacy>
+<https://github.com/tylazhao/FinP-PoPETs>
 
-Reviewers should use the latest commit on the default branch. (A stable
-commit-id / tag will be provided once artifact evaluation is finalized.)
+Reviewers should use the latest commit on the default branch.
 
 ### Set up the environment
 
 Clone the repository and create the environment (Conda recommended):
 
 ```bash
-git clone https://github.com/PervasiveAutonomyLab/FinP-Fairness-in-Privacy.git
+git clone https://github.com/tylazhao/FinP-PoPETs
 cd FinP-Fairness-in-Privacy
 
 # Option A: Conda (creates an env named finp_v2 with Python 3.12.7)
@@ -125,7 +118,7 @@ Then run a short, end-to-end smoke test (one FEMNIST configuration, 2 rounds):
 python -m experiments.run --dataset femnist --only finp_beta1 --epochs 2
 ```
 
-Expected output: per-round training logs, a `RUN SUMMARY` block, and finally an
+Expected output for end-to-end smoke test: per-round training logs, a `RUN SUMMARY` block, and finally an
 `EXPERIMENT COMPARISON` table with a single `finp_beta1` (SIA) row, e.g.:
 
 ```
@@ -143,16 +136,11 @@ A CSV copy is written to `experiments/logs/femnist/comparison_femnist.csv`. This
 test takes ~2–3 minutes on CPU (well under a minute on a modern GPU). If it
 completes and produces the table, the environment is set up correctly.
 
-## Artifact Evaluation (Required for Functional and Reproduced badges)
-
-This section should include all the steps required to evaluate your artifact's
-functionality and validate your paper's key results and claims. Therefore,
-highlight your paper's main results and claims in the first subsection. And
-describe the experiments that support your claims in the subsection after that.
+## Artifact Evaluation 
 
 ### Main Results and Claims
 
-In the FinP paper, we propose a method that reduces privacy disparity among
+In the FinP paper, we propose a method that reduces privacy (loss) disparity among
 clients in a federated-learning setup when SIA and MIA attacks are launched.
 
 #### Main Result 1: Protecting SIA with the FEMNIST dataset
@@ -163,7 +151,7 @@ baseline while keeping utility (train/test accuracy) relatively stable. In
 contrast, DP worsens loss disparity (`loss_mad_mean`) and significantly
 degrades utility (train/test accuracy). This claim is reproducible by executing
 [Experiment 1: femnist](#experiment-1-femnist). In that experiment we run
-baseline, FinP with β ∈ {0.5, 0.75, 1}, and DP with noise ∈ {0.75, 1, 2}. We
+baseline, FinP with beta ∈ {0.5, 0.75, 1}, and DP with noise ∈ {0.75, 1, 2}. We
 report these results in Table 4 of the paper.
 
 #### Main Result 2: Protecting MIA with the FEMNIST dataset
@@ -174,14 +162,14 @@ the baseline while keeping utility (train/test accuracy) relatively stable. In
 contrast, DP worsens loss disparity (`loss_mad_mean`) and significantly
 degrades utility (train/test accuracy). This claim is reproducible by executing
 [Experiment 2: femnist-mia](#experiment-2-femnist-mia). In that experiment we
-run baseline-mia, FinP-mia with β ∈ {0.5, 0.75, 1}, and DP-mia with noise ∈
+run baseline-mia, FinP-mia with beta ∈ {0.5, 0.75, 1}, and DP-mia with noise ∈
 {0.75, 1, 2}. We report these results in Table 5 of the paper.
 
 ### Experiments
 
 Each full-dataset run prints a comparison table and writes
 `experiments/logs/<dataset>/comparison_<dataset>.csv`. Rows are ordered:
-baseline first, then FinP (β from 1 to 0.5), then DP (noise from 2 to 0.75).
+baseline first, then FinP (beta from 1 to 0.5), then DP (noise from 2 to 0.75).
 Columns (parsed from each run's `RUN SUMMARY` block):
 
 | Column | Meaning |
@@ -201,7 +189,7 @@ instead of SIA.
 
 #### Experiment 1: femnist
 
-- **Time:** ~15 human-minutes + ~2 compute-hours (A100 GPU)
+- **Time:** ~15 human-minutes + ~2 compute-hours
 - **Storage:** < 4 GB
 
 This experiment reproduces
@@ -212,10 +200,10 @@ The following command runs the full FEMNIST matrix automatically:
 python -m experiments.run --dataset femnist
 ```
 
-Runs (in order): baseline; FinP β = 1, 0.75, 0.5; DP clip 7.5, noise 0.75, 1, 2.
+Runs (in order): baseline; FinP beta = 1, 0.75, 0.5; DP clip 7.5, noise 0.75, 1, 2.
 Each run is logged to `experiments/logs/femnist/`. At the end, the script
 prints a comparison table and writes `comparison_femnist.csv`, which can be
-compared directly to Table 4 in the paper.
+compared directly to *Table 4* in the paper.
 
 #### Experiment 2: femnist-mia
 
@@ -230,14 +218,11 @@ The following command runs the full FEMNIST-mia matrix automatically:
 python -m experiments.run --dataset femnist-mia
 ```
 
-Runs (in order): baseline-mia; FinP-mia β = 1, 0.75, 0.5; DP-mia clip 7.5,
+Runs (in order): baseline-mia; FinP-mia beta = 1, 0.75, 0.5; DP-mia clip 7.5,
 noise 0.75, 1, 2. Each run is logged to `experiments/logs/femnist-mia/`. At the
 end, the script prints a comparison table and writes `comparison_femnist-mia.csv`,
-which can be compared directly to Table 5 in the paper.
+which can be compared directly to *Table 5* in the paper.
 
-Additional datasets (`har`, `cifar-cnn`, `cifar-res`) are described in
-`README.md` and can be run with `python -m experiments.run --dataset <name>`,
-but they are not required for the main claims above.
 
 ## Limitations
 
@@ -253,12 +238,11 @@ but they are not required for the main claims above.
 - **GPU strongly recommended.** CPU execution is supported but markedly slower,
   particularly for FEMNIST FinP runs because of the per-client Hessian
   estimation.
-- **Other datasets.** Results for `har`, `cifar-cnn`, and `cifar-res` are
-  described in `README.md` but are not listed under Main Results and Claims,
-  because they take longer to run and FEMNIST results are sufficient to validate
-  our claims.
-- **FedAlign baseline.** The FedAlign ResNet path (`--model res --runfed`) is
-  included for completeness and is not part of the main FinP comparison.
+- **Other datasets.** Additional datasets (`har`, `cifar-cnn`, `cifar-res`) are described in
+   `README.md` and can be run with `python -m experiments.run --dataset <name>`,
+   but they are not required for the main claims above. They are not included in Main Results and Claims
+   because they will take longer to run and demonstrated FEMNIST results are sufficient to validate
+   our claims in full.
 
 ## Notes on Reusability
 
