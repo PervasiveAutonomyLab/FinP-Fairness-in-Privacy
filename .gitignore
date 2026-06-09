@@ -35,3 +35,4 @@ data/*
 # Skip the large precomputed 561-feature files (X_*.txt); the TCN model reads
 # the raw Inertial Signals instead, so these ~47MB files are unused.
 data/har/**/X_*.txt
+experiemnts/run_femnist_mia_beta_sweep.py
