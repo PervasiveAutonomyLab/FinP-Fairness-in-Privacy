@@ -12,6 +12,7 @@ from .edu_data import process_edu_data
 import pickle
 import os
 from .data_preprocessing import fedfl_adapter as fedad
+from .femnist_federated import prepare_femnist_federated
 
 
 def get_dataset(args):
@@ -107,7 +108,24 @@ def get_dataset(args):
 
         return train_dataset, test_dataset, dict_party_user, dict_sample_user, test_subsets, class_test
 
-
+    if args.dataset == 'FEMNIST':
+        train_dataset, test_dataset, dict_party_user, dict_sample_user, test_subsets, class_test = (
+            prepare_femnist_federated(args)
+        )
+        if args.opt and args.col:
+            folder = 'results/FEMNIST/finp/'
+        elif args.opt:
+            folder = 'results/FEMNIST/opt/'
+        elif args.col:
+            folder = 'results/FEMNIST/col/'
+        else:
+            folder = 'results/FEMNIST/base/'
+        filename = 'dataset_profile.pkl'
+        file_path = os.path.join(folder, filename)
+        # os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # with open(file_path, 'wb+') as f:
+        #     pickle.dump([dict_party_user, dict_sample_user], f)
+        return train_dataset, test_dataset, dict_party_user, dict_sample_user, test_subsets, class_test
 
     else:
         train_dataset = []
@@ -122,13 +140,18 @@ def get_dataset(args):
 def exp_details(args):
     print('\nExperimental details:')
     print(f'    Model     : {args.model}')
-    print(f'    Optimizer : Adam')
+    # print(f'    Optimizer : Adam')
     print(f'    Learning  : {args.lr}')
     print(f'    Global Rounds   : {args.epochs}\n')
 
     print('    Federated parameters:')
     print(f'   Realistic dataset for Non-IID setting:{args.dataset}'f' has {args.num_classes} classes')
-    print(f'   Level of non-iid data distribution:{args.alpha}')
+    if args.dataset == 'FEMNIST':
+        hf = getattr(args, 'femnist_hf_name', 'flwrlabs/femnist')
+        tf = getattr(args, 'femnist_test_fraction', 0.2)
+        print(f'   FEMNIST: one writer per client; HF dataset={hf}; train/test per writer={1 - tf:.0%}/{tf:.0%}')
+    else:
+        print(f'   Level of non-iid data distribution:{args.alpha}')
     print(f'    Number of users  : {args.num_users}')
     print(f'    Local Batch size   : {args.local_bs}')
     print(f'    Local Epochs       : {args.local_ep}\n')

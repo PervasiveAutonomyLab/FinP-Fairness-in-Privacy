@@ -1,0 +1,71 @@
+# below are command needs to run in the terminal
+
+## for FEMNIST dataset 
+Note: when using this dataset, lr is 0.02, other datasets lr is 0.01
+
+### Baseline
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 2>&1 | tee femnist_run_baseline_$(date +%Y%m%d_%H%M%S).log
+
+### FinP
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --opt --col --beta=1 --hessian_eig_max_iter 20 --hessian_trace_max_iter 20 --hessian_tol 5e-3 2>&1 | tee femnist_run_finp_$(date +%Y%m%d_%H%M%S).log
+Note: using those hassian config in this femnist dataset to speed up the hessian calculation   --hessian_eig_max_iter 20 --hessian_trace_max_iter 20 --hessian_tol 5e-3 
+Note: run ablation --beta = 0.5, 0.75, 1
+
+### DP-femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --run_dp_baseline --dp_clip 7.5 --dp_noise=0.5 2>&1 | tee femnist_run_dp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --dp_noise= 0.75, 1, 2
+
+## for FEMNIST-mia dataset
+
+### mia-femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --mia 2>&1 | tee femnist_run_mia_$(date +%Y%m%d_%H%M%S).log
+
+### mia-dp-femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --mia --run_dp_baseline --dp_clip 7.5 --dp_noise 0.5 2>&1 | tee femnist_run_mia_dp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --dp_noise= 0.75, 1, 2
+
+### mia-finp-femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --opt --col --beta=1 --hessian_eig_max_iter 20 --hessian_trace_max_iter 20 --hessian_tol 5e-3 --mia 2>&1 | tee femnist_run_mia_finp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --beta = 0.5, 0.75, 1
+
+## for HAR dataset
+
+### Baseline
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 2>&1 | tee har_run_baseline_$(date +%Y%m%d_%H%M%S).log
+
+### finp_server
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --opt 2>&1 | tee har_run_finp_server_$(date +%Y%m%d_%H%M%S).log
+
+### finp_client
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --col 2>&1 | tee har_run_finp_client_$(date +%Y%m%d_%H%M%S).log
+
+### finp
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --opt --col 2>&1 | tee har_run_finp_$(date +%Y%m%d_%H%M%S).log
+Note: in HAR dataset, beta is using the default 2
+
+### DP-har
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --run_dp_baseline --dp_clip 5 --dp_noise=0.5 2>&1 | tee har_run_dp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --dp_noise= 0.5, 1, 2
+
+## For CIFAR-cnn dataset
+
+### Baseline
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 2>&1 | tee cifar_run_baseline_$(date +%Y%m%d_%H%M%S).log
+
+### finp
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --col --opt --beta=0.1 2>&1 | tee cifar_run_finp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --beta = 0.05, 0.1, 0.3
+
+### DP-cifar
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --run_dp_baseline --dp_clip 1.75 --dp_noise=0.5 2>&1 | tee cifar_run_dp_$(date +%Y%m%d_%H%M%S).log
+Note: run ablation --dp_noise= 0.5, 1, 2
+
+
+## for Cifar-res dataset
+### res-baseline
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5 2>&1 | tee cifar_run_baseline_res_$(date +%Y%m%d_%H%M%S).log
+
+### res-finp
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5 --col --opt --beta=0.3 2>&1 | tee cifar_run_finp_res_$(date +%Y%m%d_%H%M%S).log
+
+

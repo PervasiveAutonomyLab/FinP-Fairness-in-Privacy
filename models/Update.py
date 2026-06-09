@@ -1,12 +1,13 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+import time
 
 from .hessian import hessian # Hessian computation
 import numpy as np
 
-from torch.optim import Adam
 import random
+from opacus import PrivacyEngine
 
 
 class CollectedDataset(Dataset):
@@ -72,25 +73,34 @@ class LocalUpdate(object):
         self.beta = beta
         # self.used_data = []
 
-    def train(self, net, ):
+    def train(self, net, client_id=None, comm_round=None):
         net.train()
         # train and update
 
-        optimizer = torch.optim.Adam(net.parameters(), lr=self.args.lr)
-        # optimizer = torch.optim.SGD(net.parameters(), lr=self.args.lr, momentum=self.args.momentum)  #lr=self.args.lr
+        # SGD for all datasets (lr and momentum from args; FEMNIST+femnistnet lr set in main_fed.py).
+        optimizer = torch.optim.SGD(
+            net.parameters(), lr=self.args.lr, momentum=self.args.momentum
+        )
 
         epoch_loss = []
         # SGD == 1
         for iter in range(self.args.local_ep):
         # for iter in range(1):
             batch_loss = []
+            epoch_total_sum = 0.0
+            epoch_ce_sum = 0.0
+            epoch_extra_sum = 0.0
+            epoch_correct = 0
+            epoch_total = 0
+            n_batches = 0
             for batch_idx, (images, labels) in enumerate(self.ldr_train):
                 images, labels = images.to(self.args.device), labels.to(self.args.device)
 
                 net.zero_grad()
                 log_probs = net(images)
 
-                loss = self.loss_func(log_probs, labels)
+                ce = self.loss_func(log_probs, labels)
+                loss = ce
                 if self.collab:
                     loss_lips = approximate_lipschitz(net)
 
@@ -101,6 +111,16 @@ class LocalUpdate(object):
 
                     # print('after norm', loss.item(), self.lamb * (loss.item() / loss_lips.item())*loss_lips.item())
 
+                with torch.no_grad():
+                    pred = log_probs.argmax(dim=1)
+                    epoch_correct += (pred == labels).sum().item()
+                    epoch_total += labels.size(0)
+                    extra = (loss - ce).detach().item()
+                epoch_ce_sum += ce.item()
+                epoch_extra_sum += extra
+                epoch_total_sum += loss.item()
+                n_batches += 1
+
                 loss.backward()
 
                 # gradient normalization?
@@ -109,14 +129,41 @@ class LocalUpdate(object):
 
                 batch_loss.append(loss.item())
 
+            mean_total = epoch_total_sum / max(n_batches, 1)
+            mean_ce = epoch_ce_sum / max(n_batches, 1)
+            mean_extra = epoch_extra_sum / max(n_batches, 1)
+            acc_pct = 100.0 * epoch_correct / max(epoch_total, 1)
+            prefix = ""
+            if comm_round is not None and client_id is not None:
+                prefix = f"[Round {comm_round}] Client {client_id} | "
+            print(
+                f"  {prefix}Local Epoch {iter + 1}/{self.args.local_ep} | "
+                f"Total loss: {mean_total:.4f} | CE: {mean_ce:.4f} | Lipschitz term: {mean_extra:.4f} | "
+                f"Acc: {acc_pct:.2f}%"
+            )
+
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
         # create the hessian computation module
         # net.eval()
+        hessian_time_sec = 0.0
         if self.collab:
+            if torch.cuda.is_available() and str(self.args.device).startswith("cuda"):
+                torch.cuda.synchronize()
+            hessian_t0 = time.perf_counter()
             hessian_comp = hessian(net, self.loss_func, dataloader=self.ldr_train, mps=True)
-            top_eigenvalues, top_eigenvector = hessian_comp.eigenvalues(top_n=1)
-            trace = hessian_comp.trace()
+            top_eigenvalues, _ = hessian_comp.eigenvalues(
+                top_n=1,
+                maxIter=getattr(self.args, "hessian_eig_max_iter", 100),
+                tol=getattr(self.args, "hessian_tol", 1e-3),
+            )
+            trace = hessian_comp.trace(
+                maxIter=getattr(self.args, "hessian_trace_max_iter", 100),
+                tol=getattr(self.args, "hessian_tol", 1e-3),
+            )
+            if torch.cuda.is_available() and str(self.args.device).startswith("cuda"):
+                torch.cuda.synchronize()
+            hessian_time_sec = time.perf_counter() - hessian_t0
         else:
             top_eigenvalues = [random.randint(0, 9)]
             trace = random.randint(0, 9)
@@ -129,4 +176,79 @@ class LocalUpdate(object):
         #     self.used_data.append((images, labels))
         #     print(images, labels)
         # print('ldr_train', self.ldr_train[0])
-        return net.state_dict(), sum(epoch_loss) / len(epoch_loss), top_eigenvalues, np.mean(trace)
+        return net.state_dict(), sum(epoch_loss) / len(epoch_loss), top_eigenvalues, np.mean(trace), float(hessian_time_sec)
+
+
+
+#### DP UPDATE
+class LocalUpdateDP(object):
+    def __init__(self, args, dataset=None, idxs=None):
+        self.args = args
+        self.loss_func = nn.CrossEntropyLoss()
+        self.ldr_train = DataLoader(DatasetSplit(dataset, idxs), batch_size=self.args.local_bs, shuffle=True)
+
+    def train(self, net, client_id=None, comm_round=None):
+        net.train()
+        
+        # Standard DP baselines typically use SGD with momentum rather than Adam
+        optimizer = torch.optim.SGD(net.parameters(), lr=self.args.lr, momentum=0.9)
+
+        # Apply Differential Privacy
+        privacy_engine = PrivacyEngine()
+        net, optimizer, self.ldr_train = privacy_engine.make_private(
+            module=net,
+            optimizer=optimizer,
+            data_loader=self.ldr_train,
+            noise_multiplier=self.args.dp_noise, # e.g., 1.0
+            max_grad_norm=self.args.dp_clip,     # e.g., 1.2
+        )
+
+        epoch_loss = []
+        for iter in range(self.args.local_ep):
+            batch_loss = []
+            epoch_total_sum = 0.0
+            epoch_ce_sum = 0.0
+            epoch_correct = 0
+            epoch_total = 0
+            n_batches = 0
+            for batch_idx, (images, labels) in enumerate(self.ldr_train):
+                images, labels = images.to(self.args.device), labels.to(self.args.device)
+
+                optimizer.zero_grad()
+                log_probs = net(images)
+                loss = self.loss_func(log_probs, labels)
+
+                with torch.no_grad():
+                    pred = log_probs.argmax(dim=1)
+                    epoch_correct += (pred == labels).sum().item()
+                    epoch_total += labels.size(0)
+                ce_val = loss.item()
+                epoch_ce_sum += ce_val
+                epoch_total_sum += ce_val
+                n_batches += 1
+
+                loss.backward()
+                optimizer.step()
+
+                batch_loss.append(loss.item())
+
+            mean_total = epoch_total_sum / max(n_batches, 1)
+            mean_ce = epoch_ce_sum / max(n_batches, 1)
+            acc_pct = 100.0 * epoch_correct / max(epoch_total, 1)
+            prefix = ""
+            if comm_round is not None and client_id is not None:
+                prefix = f"[Round {comm_round}] Client {client_id} | "
+            print(
+                f"  {prefix}Local Epoch {iter + 1}/{self.args.local_ep} | "
+                f"Total loss: {mean_total:.4f} | CE: {mean_ce:.4f} | Lipschitz term: {0.0:.4f} | "
+                f"Acc: {acc_pct:.2f}%"
+            )
+
+            epoch_loss.append(sum(batch_loss) / len(batch_loss))
+
+        # Safely unwrap the model to extract the standard state_dict
+        unwrapped_net = net._module
+
+        # Return state_dict, loss, and dummy values for the Hessian/trace 
+        # so it perfectly matches the return signature of your custom LocalUpdate
+        return unwrapped_net.state_dict(), sum(epoch_loss) / len(epoch_loss), [0.0], 0.0, 0.0

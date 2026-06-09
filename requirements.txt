@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cu124
 matplotlib==3.10.3
 numpy==2.2.6
 pandas==2.2.3
@@ -6,3 +7,6 @@ scipy==1.15.3
 seaborn==0.13.2
 torch==2.6.0
 torchvision==0.21.0
+opacus==1.6.0
+datasets>=2.16.0
+Pillow>=10.0.0

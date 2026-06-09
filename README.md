@@ -1,110 +1,177 @@
 # FinP: Fairness-in-Privacy in Federated Learning
 
-Codebase for the paper:  
+Codebase for the paper
 **"FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk"**
+([arXiv:2502.17748](https://arxiv.org/abs/2502.17748)).
 
-This repository contains implementations and experiment scripts to reproduce the results presented in the [paper](https://arxiv.org/abs/2502.17748).
+FinP mitigates per-client disparities in privacy risk under **Source Inference Attacks
+(SIA)** and **Membership Inference Attacks (MIA)** via two levers:
+
+- `--opt`  — server-side aggregation that optimizes client weights.
+- `--col`  — client-side adaptive loss regularization (sharpness/Hessian-aware).
+
+Everything is driven by `main_fed.py`; the `experiments/` package automates the
+full experiment matrix per dataset and tabulates the results for comparison.
 
 ---
 
-## 📦 Environment Setup
+## 1. Environment setup
 
-We recommend using [Conda](https://docs.conda.io/) for environment management.
+Requires Python 3.12. Using Conda:
 
 ```bash
 conda env create -f environment.yml
-conda activate finp
+conda activate finp_v2
+```
+
+Or with pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+Key dependencies: `torch==2.6.0`, `torchvision==0.21.0`, `opacus` (DP baseline),
+`datasets>=2.16.0` (FEMNIST), `scikit-learn`, `scipy`, `numpy`, `pandas`,
+`matplotlib`, `seaborn`.
+
+---
+
+## 2. Datasets
+
+| Dataset  | Source                                    | Notes |
+|----------|-------------------------------------------|-------|
+| FEMNIST  | HuggingFace `flwrlabs/femnist` (auto-download, cached) | one writer per client |
+| CIFAR-10 | torchvision (auto-download to `data/cifar/`) | Dirichlet non-IID split |
+| HAR      | ships in `data/har/` (no auto-download)   | UCI Human Activity Recognition |
+
+The first FEMNIST/CIFAR run downloads and caches the data; subsequent runs are offline.
+
+---
+
+## 3. Reproducing the experiments (recommended)
+
+Run an entire dataset's experiment matrix and get a comparison table with a single
+command:
+
+```bash
+python -m experiments.run --dataset femnist
+```
+
+Available datasets: `femnist`, `femnist-mia`, `har`, `cifar-cnn`, `cifar-res`.
+
+What each dataset runs (see `experiments/config.py` for exact commands):
+
+| Dataset       | Experiments |
+|---------------|-------------|
+| `femnist`     | baseline; FinP β=0.5/0.75/1; DP clip 7.5, noise 0.75/1/2 |
+| `femnist-mia` | same matrix, each with `--mia` (white-box MIA) |
+| `har`         | baseline; server-only; client-only; FinP; DP clip 5, noise 0.5/1/2 |
+| `cifar-cnn`   | baseline; FinP β=0.05/0.1/0.3; DP clip 1.75, noise 0.5/1/2 |
+| `cifar-res`   | ResNet-56 baseline; FinP β=0.3 |
+
+Useful flags:
+
+```bash
+python -m experiments.run --dataset femnist --list          # show commands, run nothing
+python -m experiments.run --dataset femnist --dry-run        # print the exact python commands
+python -m experiments.run --dataset femnist --only baseline,finp_beta1
+python -m experiments.run --dataset femnist --epochs 2       # quick smoke test
+python -m experiments.run --dataset femnist --compare-only   # re-tabulate existing logs
+```
+
+Each run is streamed to the console and tee'd to
+`experiments/logs/<dataset>/<experiment>_<timestamp>.log`. After the runs, a
+comparison table is printed and written to
+`experiments/logs/<dataset>/comparison_<dataset>.csv`.
+
+### Comparison metrics
+
+The comparison is parsed from the `RUN SUMMARY` block each run prints. Columns:
+
+| Column            | Meaning |
+|-------------------|---------|
+| `attack`          | `SIA`, or `MIA` for `--mia` runs |
+| `train_last3` / `test_last3` | (1) mean train/test accuracy over the last 3 rounds |
+| `atk_acc_mean`    | (2) mean of average attack accuracy |
+| `atk_acc_max`     | (3) max of average attack accuracy |
+| `loss_mad_mean`   | (4) mean `average_loss_mad` |
+| `loss_cov_mean` / `loss_fi_mean` | (5) mean Loss CoV / FI |
+| `atk_cov_mean` / `atk_fi_mean`   | (6) mean attack CoV / FI |
+| `sen_welfare_mean`| (7) mean `sen_welfare` |
+
+(8) For `--mia` runs, the attack columns (2)(3)(6)(7) automatically use the MIA
+numbers (`mean/max MIA attack accuracy`, `mean MIA CoV/FI`,
+`mean reverse_mia sen_welfare`) instead of the SIA ones.
+
+You can also compare arbitrary logs directly:
+
+```bash
+python -m experiments.compare experiments/logs/femnist --csv out.csv
+python -m experiments.compare run_a.log run_b.log
 ```
 
 ---
 
-## 🚀 How to Run Experiments
+## 4. Running `main_fed.py` directly
 
-Use --opt to activate server side PCA aggregation; Use --col to activate client side adaptive loss regularization.
+The runner is a thin wrapper; you can always call `main_fed.py` yourself. Examples:
 
-### 📊 Human Activity Recognition (HAR) Dataset
-
-**Baseline:**
 ```bash
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20
+# FEMNIST (lr=0.02 and num_classes=62 are set automatically for --dataset FEMNIST)
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 \
+    --num_samples 100 --epochs 20 --local_ep 5                                  # baseline
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 \
+    --num_samples 100 --epochs 20 --local_ep 5 --opt --col --beta=1 \
+    --hessian_eig_max_iter 20 --hessian_trace_max_iter 20 --hessian_tol 5e-3    # FinP
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 \
+    --num_samples 100 --epochs 20 --local_ep 5 --run_dp_baseline \
+    --dp_clip 7.5 --dp_noise=1                                                   # DP baseline
+# add --mia to any FEMNIST command to enable the white-box MIA simulation
+
+# HAR
+python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --opt --col
+
+# CIFAR-10 CNN / ResNet
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --col --opt --beta=0.1
+python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.1 --num_users=10 --local_ep=5 --col --opt --beta=0.3
 ```
 
-**Server-Only:**
-```bash
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt
-```
+The full reference command list lives in `utils/prompts_need_run.txt`.
 
-**Client-Only:**
-```bash
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --col --beta=2
-```
+---
 
-**FinP (Full):**
-```bash
-python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt --col --beta=2
+## 5. Reproducibility note
+
+All RNGs (`random`, NumPy, PyTorch CPU/CUDA) are seeded from `--manualseed` (default
+42), and training vs. MIA use independent NumPy streams so toggling `--mia` does not
+perturb training. **However, exact bit-for-bit reproducibility across runs is not
+guaranteed**: some PyTorch operators are non-deterministic on CPU/GPU and the
+adaptive `--col` feedback amplifies tiny floating-point differences, so headline
+metrics vary by a small margin run to run. This is a property of the underlying
+training stack, not the experiment scripts. Compare results as distributions /
+trends rather than expecting identical digits.
+
+---
+
+## 6. Repository layout
+
+```
+main_fed.py            Entry point: build model, federated training loop, SIA/MIA, RUN SUMMARY
+experiments/           Automation
+  config.py            Per-dataset experiment matrices
+  run.py               Run a dataset's matrix, tee logs, emit comparison
+  compare.py           Parse RUN SUMMARY blocks -> comparison table / CSV
+models/                Nets, FedAvg, SIA, MIA, DP local update, Hessian utilities
+utils/                 Dataset loaders (FEMNIST/HAR/CIFAR), options, logger, run summary
+FedAlign/              FedAlign baseline (used by --model res --runfed)
+plotting.py            Figure generation from saved .pkl results
+data/har/              HAR dataset (ships with the repo)
+archive/               Local-only backups / old logs / figures (gitignored)
 ```
 
 ---
 
-### 🖼️ CIFAR-10 Dataset
+## 7. Plotting
 
-#### CNN Models
-
-**Baseline (CNN):**
-```bash
-python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-```
-
-**FinP (CNN):**
-```bash
-python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20 --opt --col --beta=0.1
-```
-*For ablation studies, vary `--beta` among `0.05`, `0.1`, `0.3`, and `0.5`.*
-
-#### ResNet Models
-
-**Baseline (ResNet with FedAvg):**
-```bash
-python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedavg --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-```
-
-**FedAlign (ResNet):**
-```bash
-python main_fed.py --dataset=CIFAR10 --model=res --runfed --method=fedalign --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20
-```
-
-**FinP (ResNet):**
-```bash
-python main_fed.py --dataset=CIFAR10 --model=res --alpha=0.5 --num_users=10 --local_ep=5 --opt --col --beta=0.05 --epochs=20
-```
-
----
-
-## 📈 Plotting Results
-
-Each experiment generates a `.pkl` file in the `results/` folder.
-
-To create plots:
-1. Copy the desired pickle file into the same directory as `plotting.py`.
-2. Follow the instructions inside `plotting.py` to reproduce the figures used in the paper.
-
----
-
-## 📚 Dependencies
-
-The main Python libraries used are:
-
-```
-matplotlib==3.10.3
-numpy==2.2.6
-pandas==2.2.3
-scikit_learn==1.6.1
-scipy==1.15.3
-seaborn==0.13.2
-torch==2.6.0
-torchvision==0.21.0
-```
-
-All dependencies are included in the `environment.yml` file.
-
----
+Each run also saves a `.pkl` under `resultsdprun/`. To regenerate the paper figures,
+point `plotting.py` at the desired pickle (see instructions inside that file).

@@ -177,3 +177,52 @@ class CifarCnn(nn.Module):
         out = F.relu(self.fc2(out))
         out = self.fc3(out)
         return out
+
+
+class FEMNISTNet(nn.Module):
+    def __init__(self):
+        super(FEMNISTNet, self).__init__()
+        
+        # --- Block 1 ---
+        # Standard input: 1 channel, 32 outputs
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1)
+        self.gn1 = nn.GroupNorm(8, 32)
+        
+        # Learnable Downsampling: Keeps 32 channels, but reduces spatial size (28x28 -> 14x14)
+        self.downsample1 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=2, stride=2)
+        
+        # --- Block 2 ---
+        # Standard processing: 32 -> 64 channels
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.gn2 = nn.GroupNorm(16, 64)
+        
+        # Learnable Downsampling: Keeps 64 channels, reduces spatial size (14x14 -> 7x7)
+        self.downsample2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=2, stride=2)
+        
+        # --- Fully Connected ---
+        # Original lightweight size: 64 * 7 * 7 = 3136 -> 256
+        self.fc1 = nn.Linear(64 * 7 * 7, 256)
+        self.fc2 = nn.Linear(256, 62)
+
+    def forward(self, x):
+        # Block 1
+        x = self.conv1(x)
+        x = self.gn1(x)
+        x = F.gelu(x) 
+        x = self.downsample1(x) # Smooth, learned compression
+        
+        # Block 2
+        x = self.conv2(x)
+        x = self.gn2(x)
+        x = F.gelu(x)
+        x = self.downsample2(x) # Smooth, learned compression
+        
+        # Flatten
+        x = x.view(-1, 64 * 7 * 7)
+        
+        # Linear Classifiers
+        x = F.gelu(self.fc1(x))
+        x = self.fc2(x)
+        
+        return x
+

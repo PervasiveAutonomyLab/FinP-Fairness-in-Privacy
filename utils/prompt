@@ -36,5 +36,46 @@ python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --lo
 
 beta
 python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=5 --epochs=20 --opt --col --pairwise 
-
+# no pairwise anymore
 python main_fed.py --dataset=HAR --model=tcn --alpha=0.1 --num_users=10 --local_ep=1 --epochs=20 --opt --col --beta=2
+
+
+DP
+python main_fed.py --dataset=CIFAR10 --model=cnn --alpha=0.5 --num_users=10 --local_ep=5 --epochs=20 --run_dp_baseline --lr=0.01 --dp_noise=0.5
+
+# all results saved in resultsdprun/ folder
+
+femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5
+# per client: randomly remove 10 character classes (and all their samples) before train/test split
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --femnist_remove 10
+
+added the social welfare metric
+baseline
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 2>&1 | tee finp_sw_femnist_run_$(date +%Y%m%d_%H%M%S).log
+
+finp
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --opt --col --beta=1 2>&1 | tee finp_sw_femnist_run_$(date +%Y%m%d_%H%M%S).log
+for speedup
+--hessian_eig_max_iter 20 --hessian_trace_max_iter 20 --hessian_tol 5e-3
+
+dp for femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --run_dp_baseline --dp_clip 7.5 --dp_noise=0.5 2>&1 | tee finp_sw_dp_femnist_run_$(date +%Y%m%d_%H%M%S).log
+ Note:--dp_clip 7.5, --dp_noise=0.5,1,2
+
+mia for femnist
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --opt --col --beta=1 2>&1 --mia | tee xxxxx_femnist_run_$(date +%Y%m%d_%H%M%S).log
+
+mia+dp
+python main_fed.py --dataset FEMNIST --model femnistnet --num_users 10 --num_samples 100 --epochs 20 --local_ep 5 --mia --run_dp_baseline --dp_clip 7.5 --dp_noise 0.5 2>&1 | tee xxx_femnist_run_$(date +%Y%m%d_%H%M%S).log
+ 
+
+in femnist we report the dp with 0.75 noise
+
+
+External file
+for Femnist_train
+python FEMNIST/femnist_train.py 2>&1 | tee femnist_run_$(date +%Y%m%d_%H%M%S).log
+
+
+

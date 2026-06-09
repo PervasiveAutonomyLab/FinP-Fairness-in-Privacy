@@ -74,6 +74,31 @@ def calculate_cv(data):
     return cv
 
 
+def mean_pairwise_absdiff_over_n2(xs):
+    """ΣΣ |x_i - x_j| / n² over all ordered pairs (i, j), n = len(xs)."""
+    x = np.asarray(xs, dtype=float)
+    n = x.size
+    if n == 0:
+        return 0.0
+    return float(np.sum(np.abs(x[:, np.newaxis] - x[np.newaxis, :])) / (n * n))
+
+
+def sen_welfare_from_reverse_scores(scores):
+    """
+    Sensitivity-aware welfare:
+    mu * (1 - pair_sum / (2 * n^2 * mu)), where scores are reverse metrics.
+    """
+    arr = np.asarray(scores, dtype=float)
+    n = arr.size
+    if n == 0:
+        return 0.0
+    mu = float(np.mean(arr))
+    if abs(mu) < 1e-15:
+        return 0.0
+    pair_sum = float(np.sum(np.abs(arr[:, np.newaxis] - arr[np.newaxis, :])))
+    return float(mu * (1.0 - (pair_sum / (2.0 * (n ** 2) * mu))))
+
+
 def inverse_softmax(x, axis=0):
     exp_x = torch.exp(-x)
     return exp_x / torch.sum(exp_x, dim=axis, keepdim=True)
@@ -98,6 +123,7 @@ class SIA(object):
         sum_softmax_prob = []
         hit = []
         confidence_cov = []
+        confidence_mad = []
         sia_per_client = []
 
         for idx in self.dict_mia_users:
@@ -162,12 +188,15 @@ class SIA(object):
             # print(client_confidence)
             # print(calculate_cv(client_confidence))
             confidence_cov.append(calculate_cv(client_confidence))
+            confidence_mad.append(mean_pairwise_absdiff_over_n2(client_confidence))
             confidence_all.append(client_confidence)
 
             # softmax prediction
             prediction_prob = inverse_softmax(y_loss_all, axis=0).cpu().numpy()
 
-            sum_softmax_prob.append(sum(prediction_prob[idx])/100)
+            # Mean over this victim's MIA subset (aligned with --num_samples / actual |dict_sample_user[idx]|)
+            n_mia = max(1, len(dataset_local.dataset))
+            sum_softmax_prob.append(float(np.sum(prediction_prob[idx])) / n_mia)
 
             index_of_party_loss_cpu = copy.deepcopy(index_of_party_loss).cpu().numpy().flatten()
             for i in range(len(index_of_party_loss_cpu)):
@@ -207,7 +236,17 @@ class SIA(object):
         # cov confidence for all clients
         # print('confidence_cov', confidence_cov)
         print(f'\nLoss CoV: {np.mean(confidence_cov):.3f}, FI: {1 / (1 + np.square(np.mean(confidence_cov))):.3f}', )
+        print(f'confidence_mad (per victim): {confidence_mad}')
+        average_loss_mad = float(np.mean(confidence_mad))
+        print(f'average_loss_mad: {average_loss_mad:.5f}')
+        sia_mad = float(mean_pairwise_absdiff_over_n2(sia_per_client)) if sia_per_client else float('nan')
+        print(f'sia_mad: {sia_mad:.5f}')
         print(f'Sia CoV: {calculate_cv(sia_per_client):.3f}, FI: {1 / (1 + np.square(calculate_cv(sia_per_client))):.3f}')
+
+        reverse_sia = np.array([1.0 - float(s) for s in sia_per_client], dtype=float)
+        sen_welfare = sen_welfare_from_reverse_scores(reverse_sia)
+        print(f'reverse_sia: {reverse_sia}')
+        print(f'sen_welfare: {sen_welfare:.5f}')
 
         # calculate membership inference attack accuracy
         accuracy_loss = 100.00 * correct_loss / len_set
@@ -215,8 +254,31 @@ class SIA(object):
         print('Average SIA attack accuracy : {}/{} ({:.2f}%)\n'.format(correct_loss, len_set,
                                                                                                   accuracy_loss))
 
-        # print('sia_confidence_all', confidence_all)
-        # if use losses:     np.mean(confidence_all, axis=0)
-        # if use counters:   prediction_cnt/1000
-        return accuracy_loss, confidence_all, prediction_cnt/1000, np.mean(confidence_all, axis=0), \
-               weighted_sel_cnt, sum_softmax_prob, hit, prediction_dic # prediction_cnt/1000  np.mean(confidence_all, axis=0)#
+        # Normalized argmin-win counts (sums to 1); replaces fixed /1000 = 1/num_users/num_samples assumption
+        total_assign = float(np.sum(prediction_cnt))
+        norm_prediction_cnt = prediction_cnt / max(total_assign, 1.0)
+
+        loss_cov_mean = float(np.mean(confidence_cov)) if confidence_cov else float('nan')
+        loss_fi_val = float(1.0 / (1.0 + np.square(loss_cov_mean))) if np.isfinite(loss_cov_mean) else float('nan')
+        if sia_per_client:
+            sia_cv_val = float(calculate_cv(sia_per_client))
+            if not np.isfinite(sia_cv_val):
+                sia_cv_val = float('nan')
+            sia_fi_val = float(1.0 / (1.0 + np.square(sia_cv_val))) if np.isfinite(sia_cv_val) else float('nan')
+        else:
+            sia_cv_val = float('nan')
+            sia_fi_val = float('nan')
+
+        round_metrics = {
+            'loss_cov': loss_cov_mean,
+            'loss_fi': loss_fi_val,
+            'sia_cov': sia_cv_val,
+            'sia_fi': sia_fi_val,
+            'average_loss_mad': float(average_loss_mad),
+            'sia_mad': float(sia_mad),
+            'sen_welfare': float(sen_welfare),
+            'sia_per_client': list(sia_per_client),
+        }
+
+        return accuracy_loss, confidence_all, norm_prediction_cnt, np.mean(confidence_all, axis=0), \
+               weighted_sel_cnt, sum_softmax_prob, hit, prediction_dic, round_metrics

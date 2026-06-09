@@ -1,4 +1,4 @@
-name: finp
+name: finp_v2
 dependencies:
   - python=3.12.7       
   - pip

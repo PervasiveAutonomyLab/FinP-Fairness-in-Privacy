@@ -1,5 +1,37 @@
-__pycache__
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- Run outputs / artifacts ----
+*.log
+*.pkl
 checkpoint/
-data/
 logs/
 results/
+resultsdprun/
+output_files_femnist/
+cifaradditional/
+experiments/logs/
+
+# Result figures (regenerate via plotting.py)
+*.png
+
+# Archived backups / old logs / figures (kept locally, not uploaded)
+archive/
+
+# ---- Editor / tooling ----
+.vscode/
+.idea/
+.specstory/
+.DS_Store
+
+# ---- Datasets ----
+# Ignore everything under data/ EXCEPT the HAR dataset, which has no
+# auto-download path and must ship with the repo so the project runs after clone.
+data/*
+!data/har/
+# Skip the large precomputed 561-feature files (X_*.txt); the TCN model reads
+# the raw Inertial Signals instead, so these ~47MB files are unused.
+data/har/**/X_*.txt

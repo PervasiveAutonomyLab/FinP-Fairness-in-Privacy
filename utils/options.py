@@ -13,8 +13,8 @@ def args_parser():
     parser.add_argument('--local_ep', type=int, default=10, help="the number of local epochs: E")
     parser.add_argument('--local_bs', type=int, default=64, help="local batch size: B")
     parser.add_argument('--bs', type=int, default=128, help="testing batch size")
-    parser.add_argument('--lr', type=float, default=0.001, help="learning rate")
-    parser.add_argument('--momentum', type=float, default=0.9, help="SGD momentum (default: 0.5)")
+    parser.add_argument('--lr', type=float, default=0.01, help="learning rate (default 0.01; 0.02 when --dataset FEMNIST)")
+    parser.add_argument('--momentum', type=float, default=0.0, help="SGD momentum for LocalUpdate")
     # model arguments
     parser.add_argument('--model', type=str, default='mlp', help='model name')
     # other arguments
@@ -22,13 +22,33 @@ def args_parser():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--manualseed', type=int, default=42, help='manual seed')
     parser.add_argument('--dataset', type=str, default='Synthetic', help="name of dataset")
+    parser.add_argument(
+        '--femnist_hf_name',
+        type=str,
+        default='flwrlabs/femnist',
+        help='HuggingFace dataset id for FEMNIST (when --dataset FEMNIST)',
+    )
+    parser.add_argument(
+        '--femnist_test_fraction',
+        type=float,
+        default=0.2,
+        help='Per-writer test fraction; train is 1 minus this (default 0.2 => 80%% train)',
+    )
+    parser.add_argument(
+        '--femnist_remove',
+        type=int,
+        default=0,
+        help='FEMNIST only: per client, randomly drop this many character labels (0..num_classes-1) '
+        'and all their rows before train/test split; 0 = disabled (default)',
+    )
     parser.add_argument('--num_classes', type=int, default=10, help="number of classes")
     parser.add_argument('--gpu', type=int, default=0, help="GPU ID, -1 for CPU")
     parser.add_argument('--all_clients', default=True, action='store_true', help='aggregation over all clients')
     parser.add_argument('--opt', default=False, action='store_true', help='using opt')
+    parser.add_argument('--PCA', default=False, action='store_true', help='use PCA-based optimization for aggregation weights (requires --opt)')
     parser.add_argument('--col', default=False, action='store_true', help='collaboration')
     parser.add_argument('--resume', default=False, action='store_true', help='resume checkpoint')
-    parser.add_argument('--beta', type=float, default=0.5, help="beta for lipchitz loss")
+    parser.add_argument('--beta', type=float, default=2, help="beta for lipchitz loss") # 0.3 for cifar best
 
     parser.add_argument('--runfed', default=False, action='store_true', help='using fedalign setup')
 
@@ -67,6 +87,18 @@ def args_parser():
                     help='stochastic depth probability')
     parser.add_argument('--gamma', default=0.0, type=float,
                     help='hyperparameter gamma for mixup')
+    
+    #dp
+    parser.add_argument('--run_dp_baseline', action='store_true', help='Run the DP-SGD baseline instead of the custom method')
+    parser.add_argument('--dp_noise', type=float, default=1.0, help='DP noise multiplier')
+    parser.add_argument('--dp_clip', type=float, default=1.75, help='DP gradient clipping bound')
+    parser.add_argument('--mia', action='store_true', help='Enable white-box per-round membership inference attack simulation')
+    parser.add_argument('--hessian_eig_max_iter', type=int, default=100,
+                        help='max power-iteration steps for top Hessian eigenvalue')
+    parser.add_argument('--hessian_trace_max_iter', type=int, default=100,
+                        help='max Hutchinson iterations for Hessian trace')
+    parser.add_argument('--hessian_tol', type=float, default=1e-3,
+                        help='tolerance used by Hessian eig/trace estimators')
 
 
 
@@ -78,5 +110,9 @@ def args_parser():
     args.data_dir = 'data/cifar10'
     args.partition_alpha = 0.5
     args.client_number = 10
+
+    if args.dataset == 'FEMNIST':
+        args.num_classes = 62
+        args.lr = 0.02
 
     return args

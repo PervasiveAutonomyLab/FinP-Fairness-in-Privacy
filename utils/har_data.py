@@ -1,3 +1,4 @@
+import os  # For building filesystem paths relative to the project root.
 import numpy as np  # Importing NumPy for numerical and array operations.
 import torch  # Importing PyTorch for tensor operations and building machine learning models.
 import pandas as pd  # Importing pandas for data manipulation and analysis.
@@ -7,6 +8,12 @@ import logging  # Importing logging for debug and trace information.
 import random
 from .options import args_parser
 args = args_parser()
+
+# Resolve the HAR data directory relative to this file (project_root/data/har) so
+# the dataset loads regardless of the current working directory.
+_HAR_DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'har'
+)
 
 
 
@@ -34,7 +41,7 @@ def _read_csv(filename):
 
 # Function to load label data for a given subset (train/test)
 def load_y(subset):
-    filename = f'data/har/{subset}/y_{subset}.txt'  # Constructs the filename for the labels.
+    filename = os.path.join(_HAR_DATA_DIR, subset, f'y_{subset}.txt')  # Constructs the filename for the labels.
     logging.info(f'Loading labels from: {filename}')
     y = _read_csv(filename)[0]  # Reads the first column as label data.
     return y.to_numpy()  # Converts the DataFrame column to a NumPy array.
@@ -44,7 +51,7 @@ def load_signals(subset):
     logging.info(f'Loading signal data for subset: {subset}')
     signals_data = []  # Initializes an empty list to store signal data.
     for signal in SIGNALS:  # Iterates over each signal type.
-        filename = f'data/har/{subset}/Inertial Signals/{signal}_{subset}.txt'  # Constructs the filename for the signal.
+        filename = os.path.join(_HAR_DATA_DIR, subset, 'Inertial Signals', f'{signal}_{subset}.txt')  # Constructs the filename for the signal.
         logging.info(f'Reading signal data from: {filename}')
         signals_data.append(_read_csv(filename).to_numpy())  # Reads the signal data and adds it to the list.
     logging.info(f'Successfully loaded signal data for subset: {subset}')
@@ -58,8 +65,8 @@ def load_har_data():
 
     y_train = load_y('train')  # Loads training labels.
     y_test = load_y('test')  # Loads testing labels.
-    subject_train = _read_csv('data/har/train/subject_train.txt').iloc[:, 0]  # Reads training subject IDs.
-    subject_test = _read_csv('data/har/test/subject_test.txt').iloc[:, 0]  # Reads testing subject IDs.
+    subject_train = _read_csv(os.path.join(_HAR_DATA_DIR, 'train', 'subject_train.txt')).iloc[:, 0]  # Reads training subject IDs.
+    subject_test = _read_csv(os.path.join(_HAR_DATA_DIR, 'test', 'subject_test.txt')).iloc[:, 0]  # Reads testing subject IDs.
 
     # Creates DataFrames for train and test data
     train_data = pd.DataFrame({'subject': subject_train, 'X': list(X_train), 'y': y_train})
