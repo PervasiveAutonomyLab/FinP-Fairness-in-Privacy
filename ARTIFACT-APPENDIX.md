@@ -1,182 +1,147 @@
-# Artifact Appendix (Required for all badges)
+# Artifact Appendix
 
-Paper title: **Enter the exact title of your PETS accepted paper here**
+Paper title: **FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk**
 
 Requested Badge(s):
-  - [ ] **Available**
-  - [ ] **Functional**
-  - [ ] **Reproduced**
+  - [X] **Available**
+  - [X] **Functional**
+  - [X] **Reproduced**
 
-Authors can provide this content _either_ as a separate file in their artifact
-_or_ as part of their existing documentation (e.g., `README.md`). In the latter
-case, you should have the same section titles as in this template.
+## Description
 
-This template includes several placeholders. When filling in this template for
-their artifact, the authors should:
+This artifact contains the full code, the datasets (or their auto-download
+hooks), and the automation scripts needed to reproduce the experiments in the
+paper *FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities
+in Privacy Risk*. FinP is a federated-learning method that reduces disparity in
+per-client privacy risk under **Source Inference Attacks (SIA)** and
+**Membership Inference Attacks (MIA)** through two mechanisms: server-side
+aggregation optimization (`--opt`) and client-side adaptive loss regularization
+(`--col`, controlled by `--beta`).
 
-1. Remove this note.
-2. Delete the sections that are _not_ required for the badge(s) they are
-   applying for.
-3. Omit suffixes of the form "(required/encouraged for badge ...)" from the
-   section titles.
-4. Authors should not leave the placeholder descriptions initially provided with
-   this file into the submitted version with their artifact.
+The artifact provides:
 
-While this template is provided for artifact review, you should write your
-instructions for someone trying to reuse your artifact in the future (i.e., not
-an artifact reviewer).
+- `main_fed.py` — the federated training loop with SIA/MIA evaluation that prints
+  an end-of-run `RUN SUMMARY` of accuracy, attack, and fairness metrics.
+- `experiments/` — per-dataset experiment matrices (`config.py`), an automation
+  runner (`run.py`) that reproduces every configuration and tees logs, and a
+  parser (`compare.py`) that tabulates the comparison metrics automatically.
+- `models/`, `utils/`, `FedAlign/` — model definitions, dataset loaders, and the
+  FedAlign baseline.
 
-## Description (Required for all badges)
-Replace this with the following:
+### Security/Privacy Issues and Ethical Concerns
 
-1. List the paper that the artifact relates to (i.e., paper title, authors,
-   year, or even a BibTex cite).
-2. A short description of your artifact and how it is relevant to your paper.
+There are no security, privacy, or ethical concerns. All attacks (SIA and MIA)
+are *simulated* against models trained on public datasets; running the artifact
+does not exfiltrate data, disable security mechanisms, or otherwise compromise
+the host machine.
 
-### Security/Privacy Issues and Ethical Concerns (Required for all badges)
+## Basic Requirements
 
-Replace this with a description of security or privacy risks that your artifact
-may hold for the machine of the person trying to evaluate or reuse your
-artifact. This is especially relevant for artifacts that _disable a security
-mechanism_, such as a firewall, ASLR, etc., to demonstrate an attack, as well as
-to artifacts that _run vulnerable code_, such as exploits, malware samples,
-etc., to demonstrate a vulnerability.
+A machine with a GPU is recommended (preferably an Nvidia A30 or above). The
+artifact also runs on CPU, but substantially slower.
 
-User study artifacts that include anonymized transcripts or survey responses
-should list the ethical review / IRB process followed to obtain participants'
-consent to publishing this anonymized dataset. They may also list how
-participants were compensated.
+### Hardware Requirements
 
-## Basic Requirements (Required for Functional and Reproduced badges)
+1. The artifact can run on a laptop with a capable GPU, but a server with an A30
+   (or better) GPU is recommended to keep run times manageable.
+2. Our experiments were run on Nvidia A100 GPUs.
+3. No specialized hardware (HSMs, custom accelerators, etc.) is required.
 
-For both sections below, if you are giving reviewers remote access to special
-hardware (e.g., Intel SGX v2.0) or proprietary software (e.g., Matlab R2025a)
-for the purpose of the artifact evaluation, do not provide these instructions
-here but rather in the corresponding submission field on HotCRP.
+### Software Requirements
 
-### Hardware Requirements (Required for Functional and Reproduced badges)
+1. Any Linux-based OS (e.g., a university compute server) is sufficient.
+2. Python 3.12.7 is used to run this artifact.
+3. All Python dependencies and their versions are listed in `requirements.txt`
+   (and installed via `environment.yml`). Key packages: `torch==2.6.0`,
+   `torchvision==0.21.0`, `opacus==1.6.0` (DP baseline), `datasets>=2.16.0`
+   (FEMNIST), `scikit-learn`, `scipy`, `numpy`, `pandas`, `Pillow`.
+4. Machine-learning models are provided in the `models/` folder.
+5. Datasets:
 
-Replace this with the following:
+   | Dataset  | Source                                    | Notes |
+   |----------|-------------------------------------------|-------|
+   | FEMNIST  | HuggingFace `flwrlabs/femnist` (auto-download, cached) | one writer per client |
+   | CIFAR-10 | torchvision (auto-download to `data/cifar/`) | Dirichlet non-IID split |
+   | HAR      | ships in `data/har/` (no auto-download)   | UCI Human Activity Recognition |
 
-1. A list of the _minimal hardware requirements_ to execute your artifact. If no
-   specific hardware is needed, then state "Can run on a laptop (No special
-   hardware requirements)". You may state how a researcher could gain access to
-   that hardware, e.g., by buying, renting, or even emulating it.
-2. When applying for the "Reproduced" badge, list _the specifications of the
-   hardware_ on which the experiments reported in the paper were performed. This
-   is especially relevant in cases were results might be influenced by the
-   hardware used (e.g., latency, bandwidth, throughput experiments, etc.).
+### Estimated Time and Storage Consumption
 
-### Software Requirements (Required for Functional and Reproduced badges)
+- **Compute time.** On an A100 GPU, a single FEMNIST run (20 communication
+  rounds) takes a few minutes; the full FEMNIST matrix (7 runs) takes roughly
+  1–2 hours. FEMNIST-mia adds MIA overhead per round. HAR runs complete in
+  minutes; CIFAR-10 (CNN/ResNet) runs take longer on the first invocation due to
+  the dataset download. On CPU these times grow by roughly an order of magnitude.
+  A reviewer can validate functionality in ~2–3 minutes using the smoke test
+  below.
+- **Human time.** ~15 minutes of active setup; the rest is unattended compute.
+- **Disk.** < 4 GB total (cached datasets, per-run pickles, and logs).
 
-Replace this with the software required to run your artifact and its versions,
-as follows.
+## Environment
 
-1. List the OS you used to run your artifact, along with its version (e.g.,
-   Ubuntu 22.04). If your artifact can only run on a specific OS or a specific
-   OS version, list it and explain why here. In general, your artifact reviewers
-   will probably have access to a machine with a different OS or different OS
-   version than yours; they should still be able to run appropriately packaged
-   artifacts.
-2. List the OS packages that your artifact requires, along with their versions.
-3. Artifact packaging: If you use a container runtime (e.g., Docker) to run the
-   artifact, list the container runtime and its version (e.g., Docker 23.0.3).
-   If you use VMs, list the hypervisor (e.g., VirtualBox) to run the artifact.
-4. List the programming language compiler or interpreter you used to run your
-   artifact (e.g., Python 3.13.7). Your Docker image or VM image should have
-   this version of the programming languages installed already. Your Dockerfile
-   should start from a base image with this programming language version.
-5. List packages that your artifact depends on, along with their versions. For
-   example, Python-based privacy-preserving machine learning artifacts typically
-   require `numpy`, `scipy`, etc. You may point to a file in your artifact with
-   this list, such as a `requirements.txt` file. If you rely on proprietary
-   software (e.g. Matlab R2025a), list this here and consider providing access
-   to reviewers through HotCRP.
-6. List any Machine Learning Models required to run your artifact, along with
-   their versions. If your model is hosted on a different repository, such as on
-   Zenodo, then your artifact should download it automatically (same for
-   datasets). If a required ML model is _not_ in your artifact, provide a dummy
-   model to demonstrate the functionality of the rest of your artifact.
-7. List any datasets required to run your artifact. If any required dataset is
-   not in your artifact, you should provide a synthetic dataset that showcases
-   the expected data format.
+### Accessibility
 
-### Estimated Time and Storage Consumption (Required for Functional and Reproduced badges)
+The artifact is hosted on GitHub:
+<https://github.com/PervasiveAutonomyLab/FinP-Fairness-in-Privacy>
 
-Replace the following with estimated values for:
+Reviewers should use the latest commit on the default branch. (A stable
+commit-id / tag will be provided once artifact evaluation is finalized.)
 
-- The overall human and compute times required to run the artifact.
-- The overall disk space consumed by the artifact.
+### Set up the environment
 
-This helps reviewers schedule the evaluation in their time plan and others in
-general to see if everything is running as intended. This should also be
-specified at a finer granularity for each experiment (see below).
-
-## Environment (Required for all badges)
-
-In the following, describe how to access your artifact and all related and
-necessary data and software components. Afterward, describe how to set up
-everything and how to verify that everything is set up correctly.
-
-### Accessibility (Required for all badges)
-
-Replace the following by a description of how to access your artifact via
-persistent sources. Valid hosting options are institutional and third-party
-digital repositories (e.g., GitHub, Gitlab, BitBucket, Zenodo, Figshare, etc.).
-Please do not use personal web pages or cloud storage services like Google
-Drive, Dropbox, etc.
-
-Note that once your artifact evaluation is finalized and a badge decision has
-been made, artifact chairs will collect a stable and persistent reference to
-your artifact to list on the website. For version-controlled repositories (e.g.,
-Git repositories), this will be a specific commit-id or tag.
-
-You _should not_ link to a specific commit here at submission time, as changes
-will likely happen during the evaluation process to address the reviewers'
-feedback, resulting in the link being out-of-date. Instead, you may link to the
-latest commit in your branch (e.g. main) as follows:
-https://github.com/PoPETS-AEC/example-docker-python-pip/tree/main
-
-### Set up the environment (Required for Functional and Reproduced badges)
-
-Replace the following by a description of how one should set up the environment
-for your artifact, including downloading and installing dependencies and the
-installation of the artifact itself (i.e., from the very first download or clone
-command one should perform). Be as specific as possible here. If possible, use
-code segments to simplify the workflow, e.g.,
+Clone the repository and create the environment (Conda recommended):
 
 ```bash
-git clone git@github.com:PoPETS-AEC/example-docker-python-pip.git
-docker build -t example-docker-python-pip:main .
+git clone https://github.com/PervasiveAutonomyLab/FinP-Fairness-in-Privacy.git
+cd FinP-Fairness-in-Privacy
+
+# Option A: Conda (creates an env named finp_v2 with Python 3.12.7)
+conda env create -f environment.yml
+conda activate finp_v2
+
+# Option B: pip into an existing Python 3.12 environment
+pip install -r requirements.txt
 ```
 
-Describe the expected results where it makes sense to do so.
+Notes:
 
-### Testing the Environment (Required for Functional and Reproduced badges)
+- The HAR dataset ships in `data/har/` — no download needed.
+- The first FEMNIST and CIFAR-10 runs download and cache their datasets
+  (HuggingFace and torchvision, respectively); subsequent runs are offline.
+- Output directories (`checkpoint/`, `resultsdprun/`, `experiments/logs/`) are
+  created automatically at run time.
 
-Replace the following by a description of the basic functionality tests to check
-if the environment is set up correctly. These tests could be unit tests,
-training an ML model on very low training data, etc. If these tests succeed, all
-required software should be functioning correctly. Use code segments to simplify
-the workflow, e.g.,
+### Testing the Environment
 
-Launch the Docker container, attach the current working directory (i.e., run
-from the root of the cloned git repository) as a volume, set the context to be
-that volume, and provide an interactive bash terminal:
+**Step 1.** Verify that dependencies import and that a GPU is detected (CPU-only
+execution is supported but slower):
 
 ```bash
-docker run --rm -it -v ${PWD}:/workspaces/example-docker-python-pip \
-    -w /workspaces/example-docker-python-pip \
-    --entrypoint bash example-docker-python-pip:main
+python -c "import torch, torchvision, opacus, datasets, sklearn, scipy, pandas, numpy, PIL; print('Environment OK; CUDA available:', torch.cuda.is_available())"
 ```
 
-Then within the Docker container, run:
+Then run a short, end-to-end smoke test (one FEMNIST configuration, 2 rounds):
 
 ```bash
-./test.sh
+python -m experiments.run --dataset femnist --only finp_beta1 --epochs 2
 ```
 
-Include the expected output.
+Expected output: per-round training logs, a `RUN SUMMARY` block, and finally an
+`EXPERIMENT COMPARISON` table with a single `finp_beta1` (SIA) row, e.g.:
+
+```
+========================================================================
+  EXPERIMENT COMPARISON for dataset 'femnist'
+  (attack metrics use MIA when --mia, else SIA)
+========================================================================
+experiment  attack  train_last3(%)  test_last3(%)  attack_acc_mean  attack_acc_max  ...
+----------  ------  --------------  -------------  ------------  -----------  ...
+finp_beta1  SIA     ...             ...            ...           ...          ...
+========================================================================
+```
+
+A CSV copy is written to `experiments/logs/femnist/comparison_femnist.csv`. This
+test takes ~2–3 minutes on CPU (well under a minute on a modern GPU). If it
+completes and produces the table, the environment is set up correctly.
 
 ## Artifact Evaluation (Required for Functional and Reproduced badges)
 
@@ -187,85 +152,134 @@ describe the experiments that support your claims in the subsection after that.
 
 ### Main Results and Claims
 
-List all your paper's results and claims that are supported by your submitted
-artifacts.
+In the FinP paper, we propose a method that reduces privacy disparity among
+clients in a federated-learning setup when SIA and MIA attacks are launched.
 
-#### Main Result 1: Name
+#### Main Result 1: Protecting SIA with the FEMNIST dataset
 
-Describe the results in 1 to 3 sentences. Mention what the independent and
-dependent variables are; independent variables are the ones on the x-axes of
-your figures, whereas the dependent ones are on the y-axes. By varying the
-independent variable (e.g., file size) in a given manner (e.g., linearly), we
-expect to see trends in the dependent variable (e.g., runtime, communication
-overhead) vary in another manner (e.g., exponentially). Refer to the related
-sections, figures, and/or tables in your paper and reference the experiments
-that support this result/claim. See example below.
+Our paper claims that, under SIA on FEMNIST, FinP reduces loss disparity
+(`loss_mad_mean`), `attack_acc_mean`, and `attack_acc_max` relative to the
+baseline while keeping utility (train/test accuracy) relatively stable. In
+contrast, DP worsens loss disparity (`loss_mad_mean`) and significantly
+degrades utility (train/test accuracy). This claim is reproducible by executing
+[Experiment 1: femnist](#experiment-1-femnist). In that experiment we run
+baseline, FinP with β ∈ {0.5, 0.75, 1}, and DP with noise ∈ {0.75, 1, 2}. We
+report these results in Table 4 of the paper.
 
-#### Main Result 2: Example Name
+#### Main Result 2: Protecting MIA with the FEMNIST dataset
 
-Our paper claims that when varying the file size linearly, the runtime also
-increases linearly. This claim is reproducible by executing our
-[Experiment 2](#experiment-2-example-name). In this experiment, we change the
-file size linearly, from 2KB to 24KB, at intervals of 2KB each, and we show that
-the runtime also increases linearly, reaching at most 1ms. We report these
-results in "Figure 1a" and "Table 3" (Column 3 or Row 2) of our paper.
+Our paper claims that, under MIA on FEMNIST, FinP generally reduces loss
+disparity (`loss_mad_mean`), `attack_acc_mean`, and `attack_acc_max` relative to
+the baseline while keeping utility (train/test accuracy) relatively stable. In
+contrast, DP worsens loss disparity (`loss_mad_mean`) and significantly
+degrades utility (train/test accuracy). This claim is reproducible by executing
+[Experiment 2: femnist-mia](#experiment-2-femnist-mia). In that experiment we
+run baseline-mia, FinP-mia with β ∈ {0.5, 0.75, 1}, and DP-mia with noise ∈
+{0.75, 1, 2}. We report these results in Table 5 of the paper.
 
 ### Experiments
-List each experiment to execute to reproduce your results. Describe:
- - How to execute it in detailed steps.
- - What the expected result is.
- - How long it takes to execute in human and compute times (approximately).
- - How much space it consumes on disk (approximately) (omit if <10GB).
- - Which claim and results does it support, and how.
 
-#### Experiment 1: Name
-- Time: replace with estimate in human-minutes/hours + compute-minutes/hours.
-- Storage: replace with estimate for disk space used (omit if <10GB).
+Each full-dataset run prints a comparison table and writes
+`experiments/logs/<dataset>/comparison_<dataset>.csv`. Rows are ordered:
+baseline first, then FinP (β from 1 to 0.5), then DP (noise from 2 to 0.75).
+Columns (parsed from each run's `RUN SUMMARY` block):
 
-Provide a short explanation of the experiment and expected results. Describe
-thoroughly the steps to perform the experiment and to collect and organize the
-results as expected from your paper (see example below). Use code segments to
-simplify the workflow, as follows.
+| Column | Meaning |
+|--------|---------|
+| `attack` | `SIA`, or `MIA` for `--mia` runs |
+| `train_last3` / `test_last3` | mean train/test accuracy over the last 3 rounds |
+| `attack_acc_mean` | mean of average attack accuracy |
+| `attack_acc_max` | max of average attack accuracy |
+| `attack_cov_mean` / `attack_fi_mean` | mean attack CoV / FI |
+| `loss_cov_mean` / `loss_fi_mean` | mean Loss CoV / FI |
+| `loss_mad_mean` | mean `average_loss_mad` |
+| `sen_welfare_mean` | mean `sen_welfare` |
+
+For `--mia` runs, the attack columns (`attack_acc_mean`, `attack_acc_max`,
+`attack_cov_mean`, `attack_fi_mean`, `sen_welfare_mean`) use MIA metrics
+instead of SIA.
+
+#### Experiment 1: femnist
+
+- **Time:** ~15 human-minutes + ~2 compute-hours (A100 GPU)
+- **Storage:** < 4 GB
+
+This experiment reproduces
+[Main Result 1: Protecting SIA with the FEMNIST dataset](#main-result-1-protecting-sia-with-the-femnist-dataset).
+The following command runs the full FEMNIST matrix automatically:
 
 ```bash
-python3 experiment_1.py
+python -m experiments.run --dataset femnist
 ```
 
-#### Experiment 2: Example Name
+Runs (in order): baseline; FinP β = 1, 0.75, 0.5; DP clip 7.5, noise 0.75, 1, 2.
+Each run is logged to `experiments/logs/femnist/`. At the end, the script
+prints a comparison table and writes `comparison_femnist.csv`, which can be
+compared directly to Table 4 in the paper.
 
-- Time: 10 human-minutes + 3 compute-hours
-- Storage: 20GB
+#### Experiment 2: femnist-mia
 
-This example experiment reproduces
-[Main Result 2: Example Name](#main-result-2-example-name), the following script
-will run the simulation automatically with the different parameters specified in
-the paper. (You may run the following command from the example Docker image.)
+- **Time:** ~15 human-minutes + ~3 compute-hours (A100 GPU)
+- **Storage:** < 4 GB
+
+This experiment reproduces
+[Main Result 2: Protecting MIA with the FEMNIST dataset](#main-result-2-protecting-mia-with-the-femnist-dataset).
+The following command runs the full FEMNIST-mia matrix automatically:
 
 ```bash
-python3 main.py
+python -m experiments.run --dataset femnist-mia
 ```
 
-Results from this example experiment will be aggregated over several iterations
-by the script and output directly in raw format along with variances and
-standard deviations in the `output-folder/` directory. You will also find there
-the plots for "Figure 1a" in `.pdf` format and the table for "Table 3" in `.tex`
-format. These can be directly compared to the results reported in the paper, and
-should not quantitatively vary by more than 5% from expected results.
+Runs (in order): baseline-mia; FinP-mia β = 1, 0.75, 0.5; DP-mia clip 7.5,
+noise 0.75, 1, 2. Each run is logged to `experiments/logs/femnist-mia/`. At the
+end, the script prints a comparison table and writes `comparison_femnist-mia.csv`,
+which can be compared directly to Table 5 in the paper.
 
+Additional datasets (`har`, `cifar-cnn`, `cifar-res`) are described in
+`README.md` and can be run with `python -m experiments.run --dataset <name>`,
+but they are not required for the main claims above.
 
-## Limitations (Required for Functional and Reproduced badges)
+## Limitations
 
-Describe which steps, experiments, results, graphs, tables, etc. are _not
-reproducible_ with the provided artifact. Explain why this is not
-included/possible and argue why the artifact should _still_ be evaluated for the
-respective badges.
+- **Not bit-for-bit reproducible across runs.** All RNGs are seeded from
+  `--manualseed` (default 42), but some PyTorch operators are non-deterministic
+  and the adaptive `--col` feedback amplifies tiny floating-point differences, so
+  headline metrics vary by a small margin run to run. The trends, orderings, and
+  conclusions reported in the paper are stable; reviewers should compare results
+  as distributions/trends rather than expecting identical digits.
+- **Network on first run.** FEMNIST (HuggingFace) and CIFAR-10 (torchvision) are
+  downloaded and cached on first use; an internet connection is required for that
+  initial download. HAR ships with the artifact.
+- **GPU strongly recommended.** CPU execution is supported but markedly slower,
+  particularly for FEMNIST FinP runs because of the per-client Hessian
+  estimation.
+- **Other datasets.** Results for `har`, `cifar-cnn`, and `cifar-res` are
+  described in `README.md` but are not listed under Main Results and Claims,
+  because they take longer to run and FEMNIST results are sufficient to validate
+  our claims.
+- **FedAlign baseline.** The FedAlign ResNet path (`--model res --runfed`) is
+  included for completeness and is not part of the main FinP comparison.
 
-## Notes on Reusability (Encouraged for all badges)
+## Notes on Reusability
 
-First, this section might not apply to your artifacts. Describe how your
-artifact can be used beyond your research paper, e.g., as a general framework.
-The overall goal of artifact evaluation is not only to reproduce and verify your
-research but also to help other researchers to re-use and extend your artifacts.
-Discuss how your artifacts can be adapted to other settings, e.g., more input
-dimensions, other datasets, and other behavior, through replacing individual
-modules and functionality or running more iterations of a specific module.
+This artifact is designed to be extended beyond the paper:
+
+- **Add new experiments or datasets to the automation.** Each experiment in
+  `experiments/config.py` is simply a named list of `main_fed.py` CLI flags. Add
+  an `Experiment(...)` entry (or a new dataset key) and the runner
+  (`experiments/run.py`) and comparison tooling pick it up automatically.
+- **Reuse the metric parser.** `experiments/compare.py` can tabulate any logs
+  that contain a `RUN SUMMARY` block, independent of how they were produced:
+
+  ```bash
+  python -m experiments.compare path/to/logs_or_dir --csv out.csv
+  ```
+
+- **Compose the method via flags.** `main_fed.py` exposes the building blocks
+  independently: `--opt` (server-side aggregation optimization), `--col`
+  (client-side adaptive regularization, with `--beta`), `--run_dp_baseline` (the
+  Opacus DP-SGD baseline with `--dp_clip` / `--dp_noise`), and `--mia` (white-box
+  membership inference). They can be mixed to study new combinations.
+- **Plug in new models/datasets.** Add a network in `models/Nets.py` and a loader
+  in `utils/dataset.py`, then wire them into `build_model()` and `get_dataset()`
+  in the respective files.

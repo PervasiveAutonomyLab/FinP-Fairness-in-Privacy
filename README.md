@@ -30,9 +30,9 @@ Or with pip:
 pip install -r requirements.txt
 ```
 
-Key dependencies: `torch==2.6.0`, `torchvision==0.21.0`, `opacus` (DP baseline),
-`datasets>=2.16.0` (FEMNIST), `scikit-learn`, `scipy`, `numpy`, `pandas`,
-`matplotlib`, `seaborn`.
+Key dependencies: `torch==2.6.0`, `torchvision==0.21.0`, `opacus==1.6.0` (DP
+baseline), `datasets>=2.16.0` (FEMNIST), `scikit-learn`, `scipy`, `numpy`,
+`pandas`, `matplotlib`, `seaborn`, `Pillow`.
 
 ---
 
@@ -92,11 +92,11 @@ The comparison is parsed from the `RUN SUMMARY` block each run prints. Columns:
 |-------------------|---------|
 | `attack`          | `SIA`, or `MIA` for `--mia` runs |
 | `train_last3` / `test_last3` | (1) mean train/test accuracy over the last 3 rounds |
-| `atk_acc_mean`    | (2) mean of average attack accuracy |
-| `atk_acc_max`     | (3) max of average attack accuracy |
+| `attack_acc_mean` | (2) mean of average attack accuracy |
+| `attack_acc_max`  | (3) max of average attack accuracy |
 | `loss_mad_mean`   | (4) mean `average_loss_mad` |
 | `loss_cov_mean` / `loss_fi_mean` | (5) mean Loss CoV / FI |
-| `atk_cov_mean` / `atk_fi_mean`   | (6) mean attack CoV / FI |
+| `attack_cov_mean` / `attack_fi_mean` | (6) mean attack CoV / FI |
 | `sen_welfare_mean`| (7) mean `sen_welfare` |
 
 (8) For `--mia` runs, the attack columns (2)(3)(6)(7) automatically use the MIA
@@ -140,20 +140,7 @@ The full reference command list lives in `utils/prompts_need_run.txt`.
 
 ---
 
-## 5. Reproducibility note
-
-All RNGs (`random`, NumPy, PyTorch CPU/CUDA) are seeded from `--manualseed` (default
-42), and training vs. MIA use independent NumPy streams so toggling `--mia` does not
-perturb training. **However, exact bit-for-bit reproducibility across runs is not
-guaranteed**: some PyTorch operators are non-deterministic on CPU/GPU and the
-adaptive `--col` feedback amplifies tiny floating-point differences, so headline
-metrics vary by a small margin run to run. This is a property of the underlying
-training stack, not the experiment scripts. Compare results as distributions /
-trends rather than expecting identical digits.
-
----
-
-## 6. Repository layout
+## 5. Repository layout
 
 ```
 main_fed.py            Entry point: build model, federated training loop, SIA/MIA, RUN SUMMARY
@@ -171,7 +158,3 @@ archive/               Local-only backups / old logs / figures (gitignored)
 
 ---
 
-## 7. Plotting
-
-Each run also saves a `.pkl` under `resultsdprun/`. To regenerate the paper figures,
-point `plotting.py` at the desired pickle (see instructions inside that file).
