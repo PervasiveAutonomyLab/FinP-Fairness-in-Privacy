@@ -13,6 +13,13 @@ from torch.utils.data import DataLoader
 from models.Update import DatasetSplit
 
 
+def make_mia_torch_generator(manualseed: int) -> torch.Generator:
+    """Isolated PyTorch RNG for MIA mock training; does not touch the global generator."""
+    gen = torch.Generator()
+    gen.manual_seed(manualseed + 1)
+    return gen
+
+
 def discover_attack_weight_keys(model):
     keys = []
     for module_name, module in model.named_modules():
@@ -48,10 +55,17 @@ def _compute_single_record_gradient(model, x, y, device, target_weight_keys):
     return grad_dict
 
 
-def _train_mock_local_delta(args, global_model, dataset_train, subset_indices, global_state):
+def _train_mock_local_delta(
+    args, global_model, dataset_train, subset_indices, global_state, *, torch_generator=None
+):
     local_model = copy.deepcopy(global_model).to(args.device)
     local_model.train()
-    loader = DataLoader(DatasetSplit(dataset_train, subset_indices), batch_size=args.local_bs, shuffle=True)
+    loader = DataLoader(
+        DatasetSplit(dataset_train, subset_indices),
+        batch_size=args.local_bs,
+        shuffle=True,
+        generator=torch_generator,
+    )
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(local_model.parameters(), lr=args.lr, momentum=args.momentum)
 
@@ -172,6 +186,8 @@ def run_whitebox_mia_round(
     client_to_weights,
     mia_ctx,
     target_weight_keys,
+    *,
+    torch_generator=None,
 ):
     if len(target_weight_keys) == 0:
         print("MIA skipped this round: no eligible weight layers for cosine features.")
@@ -206,6 +222,7 @@ def run_whitebox_mia_round(
             dataset_train=dataset_train,
             subset_indices=mock_subset,
             global_state=global_state,
+            torch_generator=torch_generator,
         )
 
         member_vec = _layerwise_cosine_features(g_m, delta_w_mock, target_weight_keys)

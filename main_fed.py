@@ -15,6 +15,7 @@ from models.Fed import *
 from models.Sia import SIA, mean_pairwise_absdiff_over_n2, sen_welfare_from_reverse_scores, calculate_cv
 from models.mia import (
     discover_attack_weight_keys,
+    make_mia_torch_generator,
     prepare_mia_static_data,
     run_whitebox_mia_round,
 )
@@ -214,19 +215,20 @@ def build_model(args):
 
 
 def setup_mia(args, net_glob, dataset_train, dict_party_user, rng_mia):
-    """Prepare white-box MIA context when ``--mia`` is set; else return (None, [])."""
+    """Prepare white-box MIA context when ``--mia`` is set; else return (None, [], None)."""
     if not getattr(args, "mia", False):
-        return None, []
+        return None, [], None
     if args.dataset != "FEMNIST" or args.model != "femnistnet":
         raise ValueError("--mia currently supports only --dataset FEMNIST with --model femnistnet.")
     mia_target_weight_keys = discover_attack_weight_keys(net_glob)
     mia_ctx = prepare_mia_static_data(args, dataset_train, dict_party_user, rng_mia)
+    mia_torch_gen = make_mia_torch_generator(args.manualseed)
     print(
         f"[MIA] Enabled. Dummy client=0; victims={len(mia_ctx['victim_ids'])}; "
         f"Writer A={mia_ctx['writer_a_id']}; Writer B={mia_ctx['writer_b_id']}; "
         f"layers={mia_target_weight_keys}"
     )
-    return mia_ctx, mia_target_weight_keys
+    return mia_ctx, mia_target_weight_keys, mia_torch_gen
 
 
 def resolve_results_path(args):
@@ -339,7 +341,9 @@ def main():
         )
     )
     # mia added
-    mia_ctx, mia_target_weight_keys = setup_mia(args, net_glob, dataset_train, dict_party_user, rng_mia)
+    mia_ctx, mia_target_weight_keys, mia_torch_gen = setup_mia(
+        args, net_glob, dataset_train, dict_party_user, rng_mia
+    )
 
     #
 
@@ -559,9 +563,6 @@ def main():
                 client_to_weights = {int(cid): w_locals[pos] for pos, cid in enumerate(idxs_users)}
 
             if getattr(args, "mia", False):
-                # Snapshot/restore torch RNG so MIA internals do not change training RNG progression.
-                cpu_rng_state = torch.get_rng_state()
-                cuda_rng_state_all = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
                 mia_round = run_whitebox_mia_round(
                     args=args,
                     rng=rng_mia,
@@ -572,10 +573,8 @@ def main():
                     client_to_weights=client_to_weights,
                     mia_ctx=mia_ctx,
                     target_weight_keys=mia_target_weight_keys,
+                    torch_generator=mia_torch_gen,
                 )
-                torch.set_rng_state(cpu_rng_state)
-                if cuda_rng_state_all is not None:
-                    torch.cuda.set_rng_state_all(cuda_rng_state_all)
                 mia_metrics_rounds.append(mia_round)
                 if len(mia_round) > 0:
                     victim_ids_sorted = sorted(mia_round.keys())
