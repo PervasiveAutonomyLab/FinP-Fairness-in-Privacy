@@ -2,7 +2,7 @@
 
 Codebase for the paper
 **"FinP: Fairness-in-Privacy in Federated Learning by Addressing Disparities in Privacy Risk"**
-([arXiv:2502.17748](https://arxiv.org/abs/2502.17748)).
+([arXiv:2502.17748](https://arxiv.org/abs/2502.17748)).  Our paper has been accepted for publication in Proceedings on Privacy Enhancing Technologies (PoPETs) 2026, Issue 4. 
 
 FinP mitigates per-client disparities in privacy risk under **Source Inference Attacks
 (SIA)** and **Membership Inference Attacks (MIA)** via two levers:
