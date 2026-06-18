@@ -85,7 +85,7 @@ Clone the repository and create the environment (Conda recommended):
 
 ```bash
 git clone https://github.com/tylazhao/FinP-PoPETs
-cd FinP-Fairness-in-Privacy
+cd "REPLACE FOR FOLDER LOCATION"
 
 # Option A: Conda (creates an env named finp_v2 with Python 3.12.7)
 conda env create -f environment.yml

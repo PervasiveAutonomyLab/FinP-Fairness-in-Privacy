@@ -34,12 +34,14 @@ class hessian():
         iii) the estimated eigenvalue density
     """
 
-    def __init__(self, model, criterion, data=None, dataloader=None, mps=True):  # cuda=True
+    def __init__(self, model, criterion, data=None, dataloader=None, device=None, mps=True):
         """
         model: the model that needs Hessain information
         criterion: the loss function
         data: a single batch of data, including inputs and its corresponding labels
         dataloader: the data loader including bunch of batches of data
+        device: torch device for Hessian computation; defaults to model parameter device
+        mps: legacy flag kept for backward compatibility; ignored when device is set
         """
 
         # make sure we either pass a single batch or a dataloader
@@ -56,24 +58,19 @@ class hessian():
             self.data = dataloader
             self.full_dataset = True
 
-        # if cuda:
-        #     self.device = 'cuda'
-        if mps:
-            if torch.cuda.is_available():
-                self.device = 'cuda'
-            elif torch.backends.mps.is_available():
-                self.device = 'mps'
+        if device is not None:
+            self.device = torch.device(device)
+        elif not mps:
+            self.device = torch.device('cpu')
         else:
-            self.device = 'cpu'
+            # Follow the model's placement so Hessian matches the training device.
+            self.device = next(model.parameters()).device
 
         # pre-processing for single batch case to simplify the computation.
         if not self.full_dataset:
             self.inputs, self.targets = self.data
-            # if self.device == 'cuda':
-            #     self.inputs, self.targets = self.inputs.cuda(
-            #     ), self.targets.cuda()
-            if self.device in ['cuda', 'mps']:
-                self.inputs, self.targets = self.inputs.to(self.device), self.targets.to(self.device)
+            self.inputs = self.inputs.to(self.device)
+            self.targets = self.targets.to(self.device)
 
             # if we only compute the Hessian information for a single batch data, we can re-use the gradients.
             outputs = self.model(self.inputs)

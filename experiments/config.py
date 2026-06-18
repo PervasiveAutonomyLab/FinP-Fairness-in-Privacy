@@ -50,10 +50,10 @@ _FEMNIST_HESSIAN_FAST = [
 ]
 
 # Ordering here drives both run order and the comparison-table row order:
-# FinP betas top-to-bottom 1 -> 0.5, DP noises top-to-bottom 2 -> 0.75.
+# FinP betas top-to-bottom 1 -> 0.5, DP noises top-to-bottom 0.75 -> 2.
 _FEMNIST_DP_CLIP = ["--dp_clip", "7.5"]
 _FEMNIST_BETAS = ["1", "0.75", "0.5"]
-_FEMNIST_DP_NOISES = ["2", "1", "0.75"]
+_FEMNIST_DP_NOISES = ["0.75", "1", "2"]
 
 _HAR_COMMON = [
     "--dataset", "HAR", "--model", "tcn", "--alpha", "0.1",
@@ -103,25 +103,25 @@ def _femnist_matrix(mia: bool) -> List[Experiment]:
 EXPERIMENTS = {
     "femnist": _femnist_matrix(mia=False),
     "femnist-mia": _femnist_matrix(mia=True),
-    # Same ordering convention as FEMNIST: FinP variants first, DP noise high -> low.
+    # Same ordering convention as FEMNIST: FinP variants first, DP noise low -> high.
     "har": [
         Experiment("baseline", [*_HAR_COMMON]),
         Experiment("finp_server", [*_HAR_COMMON, "--opt"]),
         Experiment("finp_client", [*_HAR_COMMON, "--col"]),
         Experiment("finp", [*_HAR_COMMON, "--opt", "--col"]),
-        Experiment("dp_noise2", [*_HAR_COMMON, "--run_dp_baseline", "--dp_clip", "5", "--dp_noise=2"]),
-        Experiment("dp_noise1", [*_HAR_COMMON, "--run_dp_baseline", "--dp_clip", "5", "--dp_noise=1"]),
         Experiment("dp_noise0.5", [*_HAR_COMMON, "--run_dp_baseline", "--dp_clip", "5", "--dp_noise=0.5"]),
+        Experiment("dp_noise1", [*_HAR_COMMON, "--run_dp_baseline", "--dp_clip", "5", "--dp_noise=1"]),
+        Experiment("dp_noise2", [*_HAR_COMMON, "--run_dp_baseline", "--dp_clip", "5", "--dp_noise=2"]),
     ],
-    # FinP beta high -> low, DP noise high -> low (matching FEMNIST).
+    # FinP beta high -> low, DP noise low -> high (matching FEMNIST).
     "cifar-cnn": [
         Experiment("baseline", [*_CIFAR_CNN_COMMON]),
         Experiment("finp_beta0.3", [*_CIFAR_CNN_COMMON, "--col", "--opt", "--beta=0.3"]),
         Experiment("finp_beta0.1", [*_CIFAR_CNN_COMMON, "--col", "--opt", "--beta=0.1"]),
         Experiment("finp_beta0.05", [*_CIFAR_CNN_COMMON, "--col", "--opt", "--beta=0.05"]),
-        Experiment("dp_noise2", [*_CIFAR_CNN_COMMON, "--run_dp_baseline", "--dp_clip", "1.75", "--dp_noise=2"]),
-        Experiment("dp_noise1", [*_CIFAR_CNN_COMMON, "--run_dp_baseline", "--dp_clip", "1.75", "--dp_noise=1"]),
         Experiment("dp_noise0.5", [*_CIFAR_CNN_COMMON, "--run_dp_baseline", "--dp_clip", "1.75", "--dp_noise=0.5"]),
+        Experiment("dp_noise1", [*_CIFAR_CNN_COMMON, "--run_dp_baseline", "--dp_clip", "1.75", "--dp_noise=1"]),
+        Experiment("dp_noise2", [*_CIFAR_CNN_COMMON, "--run_dp_baseline", "--dp_clip", "1.75", "--dp_noise=2"]),
     ],
     "cifar-res": [
         Experiment("baseline", [*_CIFAR_RES_COMMON]),

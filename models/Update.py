@@ -151,7 +151,9 @@ class LocalUpdate(object):
             if torch.cuda.is_available() and str(self.args.device).startswith("cuda"):
                 torch.cuda.synchronize()
             hessian_t0 = time.perf_counter()
-            hessian_comp = hessian(net, self.loss_func, dataloader=self.ldr_train, mps=True)
+            hessian_comp = hessian(
+                net, self.loss_func, dataloader=self.ldr_train, device=self.args.device
+            )
             top_eigenvalues, _ = hessian_comp.eigenvalues(
                 top_n=1,
                 maxIter=getattr(self.args, "hessian_eig_max_iter", 100),
