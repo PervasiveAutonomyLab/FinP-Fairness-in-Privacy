@@ -75,7 +75,7 @@ artifact also runs on CPU, but substantially slower.
 ### Accessibility
 
 The artifact is hosted on GitHub:
-<https://github.com/tylazhao/FinP-PoPETs>
+<https://github.com/PervasiveAutonomyLab/FinP-Fairness-in-Privacy>
 
 Reviewers should use the latest commit on the default branch.
 
