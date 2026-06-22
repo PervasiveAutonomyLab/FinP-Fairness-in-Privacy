@@ -50,9 +50,16 @@ artifact also runs on CPU, but substantially slower.
 1. Any Linux-based OS (e.g., a university compute server) is sufficient.
 2. Python 3.12.7 is used to run this artifact.
 3. All Python dependencies and their versions are listed in `requirements.txt`
-   (and installed via `environment.yml`). Key packages: `torch==2.6.0`,
-   `torchvision==0.21.0`, `opacus==1.6.0` (DP baseline), `datasets>=2.16.0`
+   (and installed via `environment.yml`). Key packages: `torch>=2.12.1`,
+   `torchvision>=0.27.1`, `opacus>=1.6.0` (DP baseline), `datasets>=2.16.0`
    (FEMNIST), `scikit-learn`, `scipy`, `numpy`, `pandas`, `Pillow`.
+   PyTorch is installed from the CUDA 12.8 wheel index (`cu128`). This build
+   supports recent NVIDIA GPUs, including Blackwell (e.g., RTX 50-series,
+   compute capability sm_120) and datacenter Ampere/Hopper GPUs (e.g., A100,
+   H100). Very old GPUs (Volta/V100 and earlier) may not be supported; if CUDA
+   fails to initialize, the artifact can still run on CPU (slower). See the
+   [PyTorch CUDA support matrix](https://github.com/pytorch/pytorch/blob/main/RELEASE.md#pytorch-cuda-support-matrix)
+   for details.
 4. Machine-learning models are provided in the `models/` folder.
 5. Datasets:
 
@@ -102,6 +109,11 @@ Notes:
   (HuggingFace and torchvision, respectively); subsequent runs are offline.
 - Output directories (`checkpoint/`, `resultsdprun/`, `experiments/logs/`) are
   created automatically at run time.
+- **Device selection.** By default, training uses GPU when CUDA is available.
+  Prefix any command with `CUDA_VISIBLE_DEVICES=""` to hide GPUs from PyTorch and
+  run on CPU (slower). Works with both `main_fed.py` and
+  `python -m experiments.run ...`. To pin a specific GPU, use
+  `CUDA_VISIBLE_DEVICES=0`, `1`, etc. instead.
 
 ### Testing the Environment
 
@@ -112,7 +124,8 @@ execution is supported but slower):
 python -c "import torch, torchvision, opacus, datasets, sklearn, scipy, pandas, numpy, PIL; print('Environment OK; CUDA available:', torch.cuda.is_available())"
 ```
 
-Then run a short, end-to-end smoke test (one FEMNIST configuration, 2 rounds):
+Then run a short, end-to-end smoke test (one FEMNIST configuration, 2 rounds;
+prepend `CUDA_VISIBLE_DEVICES=""` for a CPU-only run):
 
 ```bash
 python -m experiments.run --dataset femnist --only finp_beta1 --epochs 2

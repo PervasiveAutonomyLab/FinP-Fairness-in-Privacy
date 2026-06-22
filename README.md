@@ -30,9 +30,16 @@ Or with pip:
 pip install -r requirements.txt
 ```
 
-Key dependencies: `torch==2.6.0`, `torchvision==0.21.0`, `opacus==1.6.0` (DP
+Key dependencies: `torch>=2.12.1`, `torchvision>=0.27.1`, `opacus>=1.6.0` (DP
 baseline), `datasets>=2.16.0` (FEMNIST), `scikit-learn`, `scipy`, `numpy`,
-`pandas`, `matplotlib`, `seaborn`, `Pillow`.
+`pandas`, `matplotlib`, `seaborn`, `Pillow`. PyTorch is installed from the
+CUDA 12.8 wheel index (`cu128`); see `ARTIFACT-APPENDIX.md` for GPU
+compatibility notes.
+
+**CPU execution:** prefix any command with `CUDA_VISIBLE_DEVICES=""` to hide GPUs from
+PyTorch and run on CPU (slower). Works with both `main_fed.py` and
+`python -m experiments.run ...`. To pin a specific GPU, use
+`CUDA_VISIBLE_DEVICES=0`, `1`, etc. instead.
 
 ---
 
@@ -75,7 +82,7 @@ Useful flags:
 python -m experiments.run --dataset femnist --list          # show commands, run nothing
 python -m experiments.run --dataset femnist --dry-run        # print the exact python commands
 python -m experiments.run --dataset femnist --only baseline,finp_beta1
-python -m experiments.run --dataset femnist --epochs 2       # quick smoke test
+python -m experiments.run --dataset femnist --epochs 2       # quick smoke test; prepend CUDA_VISIBLE_DEVICES="" for CPU
 python -m experiments.run --dataset femnist --compare-only   # re-tabulate existing logs
 ```
 
